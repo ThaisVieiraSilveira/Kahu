@@ -54,6 +54,7 @@ export const EvaluationForm: React.FC = () => {
       return;
     }
 
+    // 1. Validate Quantitative Evaluations (Mandatory for all)
     const flatEvaluations: EvaluationEntry[] = [];
     const now = new Date();
     const date = format(now, "yyyy-MM-dd");
@@ -62,22 +63,35 @@ export const EvaluationForm: React.FC = () => {
     for (const criterion of CRITERIA) {
       for (const employee of EMPLOYEES) {
         const score = evaluations[criterion][employee];
-        if (score !== null) {
-          flatEvaluations.push({
-            evaluator,
-            employee,
-            criterion: criterion as any,
-            score,
-            date,
-            time,
-          });
+        if (score === null) {
+          alert(`Por favor, preencha a nota de "${criterion}" para o colaborador "${employee}".`);
+          return;
         }
+        flatEvaluations.push({
+          evaluator,
+          employee,
+          criterion: criterion as any,
+          score,
+          date,
+          time,
+        });
       }
     }
 
-    if (flatEvaluations.length === 0) {
-      alert("Por favor, preencha pelo menos uma avaliação.");
-      return;
+    // 2. Validate Qualitative Feedbacks (Mandatory for all)
+    const filledFeedbacks = [];
+    for (const name of EMPLOYEES) {
+      const f = feedbacks[name];
+      if (!f.positivePoints.trim() || !f.improvementPoints.trim()) {
+        alert(`Por favor, preencha os Pontos Positivos e de Melhoria para "${name}".`);
+        return;
+      }
+      filledFeedbacks.push({
+        employee: name,
+        positivePoints: f.positivePoints,
+        improvementPoints: f.improvementPoints,
+        recommendAsHighlight: f.recommendAsHighlight
+      });
     }
 
     setIsSaving(true);
@@ -85,25 +99,13 @@ export const EvaluationForm: React.FC = () => {
       // Save evaluations
       await api.saveEvaluations(flatEvaluations);
 
-      // Save feedbacks if filled
-      const filledFeedbacks = EMPLOYEES
-        .map(name => ({ name, f: feedbacks[name] }))
-        .filter(({ f }) => f.positivePoints || f.improvementPoints || f.recommendAsHighlight)
-        .map(({ name, f }) => ({
-          employee: name,
-          positivePoints: f.positivePoints,
-          improvementPoints: f.improvementPoints,
-          recommendAsHighlight: f.recommendAsHighlight
-        }));
-
-      if (filledFeedbacks.length > 0) {
-        await api.saveFeedback({
-          evaluator,
-          feedbacks: filledFeedbacks,
-          date,
-          time,
-        });
-      }
+      // Save feedbacks
+      await api.saveFeedback({
+        evaluator,
+        feedbacks: filledFeedbacks,
+        date,
+        time,
+      });
 
       setShowSuccess(true);
       setTimeout(() => {
@@ -256,7 +258,7 @@ export const EvaluationForm: React.FC = () => {
           </div>
           <div>
             <h2 className="text-3xl font-black text-neutral-900 tracking-tight">Feedback Qualitativo</h2>
-            <p className="text-neutral-500 font-medium">Deixe comentários detalhados para cada colaborador (opcional)</p>
+            <p className="text-neutral-500 font-medium">Todos os campos são obrigatórios. Escolha apenas UM destaque da equipe.</p>
           </div>
         </div>
 
@@ -280,10 +282,20 @@ export const EvaluationForm: React.FC = () => {
                   
                   <button
                     type="button"
-                    onClick={() => setFeedbacks(prev => ({
-                      ...prev,
-                      [name]: { ...prev[name], recommendAsHighlight: !prev[name].recommendAsHighlight }
-                    }))}
+                    onClick={() => {
+                      const isCurrentlySelected = feedbacks[name].recommendAsHighlight;
+                      setFeedbacks(prev => {
+                        const newFeedbacks = { ...prev };
+                        // Deselect all others if selecting this one
+                        if (!isCurrentlySelected) {
+                          Object.keys(newFeedbacks).forEach(emp => {
+                            newFeedbacks[emp] = { ...newFeedbacks[emp], recommendAsHighlight: false };
+                          });
+                        }
+                        newFeedbacks[name] = { ...newFeedbacks[name], recommendAsHighlight: !isCurrentlySelected };
+                        return newFeedbacks;
+                      });
+                    }}
                     className={cn(
                       "w-full flex items-center gap-3 p-4 rounded-2xl border transition-all duration-300",
                       feedbacks[name].recommendAsHighlight 
@@ -294,6 +306,9 @@ export const EvaluationForm: React.FC = () => {
                     <CheckCircle2 size={20} />
                     <span className="text-xs font-black uppercase tracking-widest">Destaque da Equipe</span>
                   </button>
+                  <p className="text-[10px] text-neutral-400 mt-3 font-medium text-center italic">
+                    *Apenas 1 destaque por avaliação
+                  </p>
                 </div>
 
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-8">

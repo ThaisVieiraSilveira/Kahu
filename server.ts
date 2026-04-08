@@ -72,6 +72,8 @@ async function startServer() {
         message = "Aba da planilha não encontrada. Verifique se as abas 'Avaliacoes_Brutas' e 'Feedbacks' existem.";
       } else if (message.includes("invalid_grant") || message.includes("PEM_read_bio_PrivateKey")) {
         message = "Credenciais do Google inválidas. Verifique o e-mail e a chave privada (certifique-se de que a chave inclua as linhas BEGIN e END).";
+      } else if (message.includes("The caller does not have permission")) {
+        message = "Sem permissão de acesso. Certifique-se de que você compartilhou a planilha com o e-mail da Conta de Serviço como 'Editor'.";
       }
       res.status(500).json({ error: message });
     }
@@ -114,6 +116,8 @@ async function startServer() {
         message = "Aba da planilha não encontrada. Verifique se a aba 'Feedbacks' existe.";
       } else if (message.includes("invalid_grant") || message.includes("PEM_read_bio_PrivateKey")) {
         message = "Credenciais do Google inválidas. Verifique o e-mail e a chave privada.";
+      } else if (message.includes("The caller does not have permission")) {
+        message = "Sem permissão de acesso. Certifique-se de que você compartilhou a planilha com o e-mail da Conta de Serviço como 'Editor'.";
       }
       res.status(500).json({ error: message });
     }
@@ -146,6 +150,8 @@ async function startServer() {
       let message = error.message;
       if (message.includes("Requested entity was not found")) {
         message = "Aba da planilha não encontrada. Verifique se a aba 'Avaliacoes_Brutas' existe.";
+      } else if (message.includes("The caller does not have permission")) {
+        message = "Sem permissão de acesso. Certifique-se de que você compartilhou a planilha com o e-mail da Conta de Serviço como 'Editor'.";
       }
       res.status(500).json({ error: message });
     }
@@ -179,6 +185,8 @@ async function startServer() {
       let message = error.message;
       if (message.includes("Requested entity was not found")) {
         message = "Aba da planilha não encontrada. Verifique se a aba 'Feedbacks' existe.";
+      } else if (message.includes("The caller does not have permission")) {
+        message = "Sem permissão de acesso. Certifique-se de que você compartilhou a planilha com o e-mail da Conta de Serviço como 'Editor'.";
       }
       res.status(500).json({ error: message });
     }
