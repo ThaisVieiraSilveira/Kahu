@@ -7,7 +7,10 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ evaluations }),
     });
-    if (!response.ok) throw new Error("Falha ao salvar avaliações");
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "Falha ao salvar avaliações");
+    }
     return response.json();
   },
 
@@ -17,7 +20,10 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(feedback),
     });
-    if (!response.ok) throw new Error("Falha ao salvar feedback");
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "Falha ao salvar feedback");
+    }
     return response.json();
   },
 

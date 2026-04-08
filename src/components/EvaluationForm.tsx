@@ -131,9 +131,9 @@ export const EvaluationForm: React.FC = () => {
         );
         window.scrollTo({ top: 0, behavior: "smooth" });
       }, 4000);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Erro ao salvar avaliações. Verifique a conexão.");
+      alert(`Erro ao salvar: ${error.message || "Verifique a conexão e as configurações do Google Sheets."}`);
     } finally {
       setIsSaving(false);
     }

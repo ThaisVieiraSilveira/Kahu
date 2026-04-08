@@ -14,15 +14,29 @@ async function startServer() {
   app.use(express.json());
 
   // Google Sheets Setup
-  const auth = new GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    },
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
+  const getGoogleAuth = () => {
+    const client_email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim();
+    let private_key = process.env.GOOGLE_PRIVATE_KEY?.trim();
 
-  const sheets = google.sheets({ version: "v4", auth });
+    if (private_key?.startsWith('"') && private_key?.endsWith('"')) {
+      private_key = private_key.substring(1, private_key.length - 1);
+    }
+    
+    private_key = private_key?.replace(/\\n/g, "\n");
+
+    if (!client_email || !private_key) {
+      console.warn("Google Sheets credentials not fully configured. Check GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY.");
+      return null;
+    }
+
+    return new GoogleAuth({
+      credentials: { client_email, private_key },
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+  };
+
+  const auth = getGoogleAuth();
+  const sheets = auth ? google.sheets({ version: "v4", auth }) : null;
   const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID;
 
   // API Routes
@@ -30,8 +44,8 @@ async function startServer() {
     try {
       const { evaluations } = req.body;
       
-      if (!SPREADSHEET_ID) {
-        return res.status(500).json({ error: "Spreadsheet ID not configured" });
+      if (!SPREADSHEET_ID || !sheets) {
+        return res.status(500).json({ error: "Configuração do Google Sheets incompleta (ID ou Credenciais ausentes)" });
       }
 
       const values = evaluations.map((e: any) => [
@@ -53,7 +67,13 @@ async function startServer() {
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error saving to Google Sheets:", error);
-      res.status(500).json({ error: error.message });
+      let message = error.message;
+      if (message.includes("Requested entity was not found")) {
+        message = "Aba da planilha não encontrada. Verifique se as abas 'Avaliacoes_Brutas' e 'Feedbacks' existem.";
+      } else if (message.includes("invalid_grant") || message.includes("PEM_read_bio_PrivateKey")) {
+        message = "Credenciais do Google inválidas. Verifique o e-mail e a chave privada (certifique-se de que a chave inclua as linhas BEGIN e END).";
+      }
+      res.status(500).json({ error: message });
     }
   });
 
@@ -61,8 +81,8 @@ async function startServer() {
     try {
       const { evaluator, feedbacks, date, time } = req.body;
       
-      if (!SPREADSHEET_ID) {
-        return res.status(500).json({ error: "Spreadsheet ID not configured" });
+      if (!SPREADSHEET_ID || !sheets) {
+        return res.status(500).json({ error: "Configuração do Google Sheets incompleta (ID ou Credenciais ausentes)" });
       }
 
       const values = feedbacks.map((f: any) => [
@@ -89,14 +109,20 @@ async function startServer() {
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error saving feedback to Google Sheets:", error);
-      res.status(500).json({ error: error.message });
+      let message = error.message;
+      if (message.includes("Requested entity was not found")) {
+        message = "Aba da planilha não encontrada. Verifique se a aba 'Feedbacks' existe.";
+      } else if (message.includes("invalid_grant") || message.includes("PEM_read_bio_PrivateKey")) {
+        message = "Credenciais do Google inválidas. Verifique o e-mail e a chave privada.";
+      }
+      res.status(500).json({ error: message });
     }
   });
 
   app.get("/api/get-evaluations", async (req, res) => {
     try {
-      if (!SPREADSHEET_ID) {
-        return res.status(500).json({ error: "Spreadsheet ID not configured" });
+      if (!SPREADSHEET_ID || !sheets) {
+        return res.status(500).json({ error: "Configuração do Google Sheets incompleta (ID ou Credenciais ausentes)" });
       }
 
       const response = await sheets.spreadsheets.values.get({
@@ -117,14 +143,18 @@ async function startServer() {
       res.json({ evaluations });
     } catch (error: any) {
       console.error("Error fetching from Google Sheets:", error);
-      res.status(500).json({ error: error.message });
+      let message = error.message;
+      if (message.includes("Requested entity was not found")) {
+        message = "Aba da planilha não encontrada. Verifique se a aba 'Avaliacoes_Brutas' existe.";
+      }
+      res.status(500).json({ error: message });
     }
   });
 
   app.get("/api/get-feedbacks", async (req, res) => {
     try {
-      if (!SPREADSHEET_ID) {
-        return res.status(500).json({ error: "Spreadsheet ID not configured" });
+      if (!SPREADSHEET_ID || !sheets) {
+        return res.status(500).json({ error: "Configuração do Google Sheets incompleta (ID ou Credenciais ausentes)" });
       }
 
       const response = await sheets.spreadsheets.values.get({
@@ -146,7 +176,11 @@ async function startServer() {
       res.json({ feedbacks });
     } catch (error: any) {
       console.error("Error fetching feedbacks from Google Sheets:", error);
-      res.status(500).json({ error: error.message });
+      let message = error.message;
+      if (message.includes("Requested entity was not found")) {
+        message = "Aba da planilha não encontrada. Verifique se a aba 'Feedbacks' existe.";
+      }
+      res.status(500).json({ error: message });
     }
   });
 
