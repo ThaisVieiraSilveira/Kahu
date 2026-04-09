@@ -184,7 +184,7 @@ export const EvaluationForm: React.FC = () => {
           </div>
           <div className="flex-1">
             <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-widest mb-2">
-              Quem está avaliando?
+              Eu sou
             </label>
             <select
               value={evaluator}

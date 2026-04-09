@@ -16,18 +16,13 @@ export default function App() {
       {/* Navigation Bar */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-neutral-100 sticky top-0 z-[100]">
         <div className="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
-          <div className="flex items-center gap-4 group cursor-pointer select-none">
-            <div className="bg-brand-600 w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-[0_8px_16px_rgba(101,163,13,0.2)] group-hover:shadow-[0_12px_24px_rgba(101,163,13,0.3)] group-hover:-translate-y-1 group-hover:rotate-3 transition-all duration-500 ease-out">
-              <Dog size={28} />
-            </div>
-            <div className="flex flex-col">
-              <h1 className="text-2xl font-black bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-600 bg-clip-text text-transparent tracking-tighter leading-none transition-all duration-500 group-hover:from-brand-700 group-hover:to-brand-500">
-                KAHU
-              </h1>
-              <p className="text-[10px] font-black text-brand-600 uppercase tracking-[0.3em] mt-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                Lar do seu PET
-              </p>
-            </div>
+          <div className="flex flex-col select-none">
+            <h1 className="text-2xl font-black bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-600 bg-clip-text text-transparent tracking-tighter leading-none">
+              KAHU
+            </h1>
+            <p className="text-[10px] font-black text-brand-600 uppercase tracking-[0.3em] mt-1.5 opacity-80">
+              Lar do seu PET
+            </p>
           </div>
 
           <div className="flex items-center bg-neutral-100/50 p-1.5 rounded-[1.25rem] border border-neutral-100">
