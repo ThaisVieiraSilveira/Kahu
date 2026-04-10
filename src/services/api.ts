@@ -2,8 +2,12 @@ import { EvaluationEntry } from "../types";
 
 const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
+console.log("API Service Initialized. Google Script URL:", GOOGLE_SCRIPT_URL ? "Defined" : "Not Defined");
+
 export const api = {
   async saveEvaluations(evaluations: EvaluationEntry[]) {
+    console.log("Attempting to save evaluations. Script URL present:", !!GOOGLE_SCRIPT_URL);
+    
     // If Google Script URL is provided, send data there directly
     if (GOOGLE_SCRIPT_URL) {
       try {
@@ -16,12 +20,14 @@ export const api = {
           horario: e.time
         }));
 
-        await fetch(GOOGLE_SCRIPT_URL, {
+        console.log("Sending to Google Script...");
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
           method: "POST",
-          // Using text/plain avoids CORS preflight but Google Script can still parse it
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ action: "saveEvaluations", evaluations: mappedEvaluations }),
         });
+        
+        console.log("Google Script response status:", response.status);
         return { success: true };
       } catch (error) {
         console.error("Error sending to Google Script:", error);
@@ -29,6 +35,7 @@ export const api = {
       }
     }
 
+    console.warn("VITE_GOOGLE_SCRIPT_URL not found. Falling back to local API.");
     // Fallback to local server API
     const response = await fetch("/api/save-evaluations", {
       method: "POST",
@@ -43,13 +50,16 @@ export const api = {
   },
 
   async saveFeedback(feedback: any) {
+    console.log("Attempting to save feedback. Script URL present:", !!GOOGLE_SCRIPT_URL);
     if (GOOGLE_SCRIPT_URL) {
       try {
-        await fetch(GOOGLE_SCRIPT_URL, {
+        console.log("Sending feedback to Google Script...");
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ action: "saveFeedback", ...feedback }),
         });
+        console.log("Google Script feedback response status:", response.status);
         return { success: true };
       } catch (error) {
         console.error("Error sending feedback to Google Script:", error);
@@ -57,6 +67,7 @@ export const api = {
       }
     }
 
+    console.warn("VITE_GOOGLE_SCRIPT_URL not found for feedback. Falling back to local API.");
     const response = await fetch("/api/save-feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
