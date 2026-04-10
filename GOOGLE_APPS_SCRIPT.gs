@@ -63,6 +63,49 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
+    if (data.action === "getData") {
+      const evalSheet = ss.getSheetByName("Avaliacoes_Brutas");
+      const feedbackSheet = ss.getSheetByName("Feedbacks");
+      
+      const evaluations = [];
+      if (evalSheet) {
+        const values = evalSheet.getDataRange().getValues();
+        if (values.length > 1) {
+          for (let i = 1; i < values.length; i++) {
+            evaluations.push({
+              evaluator: values[i][0],
+              employee: values[i][1],
+              criterion: values[i][2],
+              score: values[i][3],
+              date: values[i][4],
+              time: values[i][5]
+            });
+          }
+        }
+      }
+      
+      const feedbacks = [];
+      if (feedbackSheet) {
+        const values = feedbackSheet.getDataRange().getValues();
+        if (values.length > 1) {
+          for (let i = 1; i < values.length; i++) {
+            feedbacks.push({
+              evaluator: values[i][0],
+              employee: values[i][1],
+              positivePoints: values[i][2],
+              improvementPoints: values[i][3],
+              recommendAsHighlight: values[i][4] === "Sim",
+              date: values[i][5],
+              time: values[i][6]
+            });
+          }
+        }
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({ success: true, evaluations, feedbacks }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
     return ContentService.createTextOutput(JSON.stringify({ error: "Ação inválida" }))
       .setMimeType(ContentService.MimeType.JSON);
       

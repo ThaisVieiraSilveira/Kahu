@@ -25,9 +25,11 @@ export const AdminDashboard: React.FC = () => {
   const [filterEvaluator, setFilterEvaluator] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       const [evaluations, feedbackData] = await Promise.all([
         api.getEvaluations(),
@@ -35,8 +37,9 @@ export const AdminDashboard: React.FC = () => {
       ]);
       setData(evaluations);
       setFeedbacks(feedbackData);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      setFetchError(error.message || "Erro desconhecido ao buscar dados.");
     } finally {
       setIsLoading(false);
     }
@@ -101,6 +104,40 @@ export const AdminDashboard: React.FC = () => {
 
   const COLORS = ["#65a30d", "#84cc16", "#a3e635", "#bef264", "#d9f99d", "#ecfccb"];
 
+  const exportToCSV = () => {
+    if (data.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    // Header
+    let csvContent = "Data;Horário;Avaliador;Colaborador;Critério;Nota\n";
+
+    // Rows
+    data.forEach(e => {
+      const row = [
+        e.date,
+        e.time,
+        e.evaluator,
+        e.employee,
+        e.criterion,
+        e.score
+      ].join(";");
+      csvContent += row + "\n";
+    });
+
+    // Create blob and download
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `relatorio_kahu_${format(new Date(), "yyyy-MM-dd")}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -129,12 +166,26 @@ export const AdminDashboard: React.FC = () => {
           >
             <RefreshCw size={20} />
           </button>
-          <button className="btn-primary flex items-center gap-3 h-14 px-8">
+          <button 
+            onClick={exportToCSV}
+            className="btn-primary flex items-center gap-3 h-14 px-8"
+          >
             <Download size={20} />
             <span className="text-sm font-bold uppercase tracking-widest">Exportar Relatório</span>
           </button>
         </div>
       </header>
+
+      {fetchError && (
+        <div className="bg-red-50 border border-red-100 text-red-600 p-6 rounded-3xl mb-12 flex items-center gap-4">
+          <Activity size={24} />
+          <div>
+            <p className="font-bold">Erro ao carregar dados:</p>
+            <p className="text-sm">{fetchError}</p>
+            <p className="text-xs mt-2 opacity-70">Verifique se a URL do Google Script está correta e se o script foi publicado como 'Qualquer pessoa'.</p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
