@@ -160,8 +160,8 @@ export const EvaluationForm: React.FC = () => {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }, 4000);
     } catch (error: any) {
-      console.error(error);
-      alert(`Erro ao salvar: ${error.message || "Verifique a conexão e as configurações do Google Sheets."}`);
+      console.error("Save failed:", error);
+      alert(`ERRO AO SALVAR:\n\n${error.message}\n\nPor favor, tente novamente. Se o erro persistir, verifique sua conexão ou se o Google Script está ativo.`);
     } finally {
       setIsSaving(false);
     }

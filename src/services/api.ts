@@ -15,8 +15,9 @@ async function callProxy(action: string, extraData: any = {}) {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error("[Proxy Error Data]", errorData);
       const errorMessage = errorData.error || `Erro no servidor (${response.status})`;
-      const errorDetails = errorData.details ? ` | Detalhes: ${errorData.details}` : "";
+      const errorDetails = errorData.details ? `\n\nDetalhes técnicos: ${errorData.details}` : "";
       throw new Error(errorMessage + errorDetails);
     }
     

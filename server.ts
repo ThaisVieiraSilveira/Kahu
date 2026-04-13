@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs";
@@ -12,7 +13,9 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(cors());
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
   const GOOGLE_SCRIPT_URL_ENV = process.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbyfLkaHUasGF7J09Gyoq2iWLzWv5TX4IrHQxEDyC8x5J2VrvVAlE4tWoipMBlnYRDFD/exec";
   const distPath = path.join(process.cwd(), "dist");
@@ -218,7 +221,8 @@ async function startServer() {
   app.post("/api/admin-login", (req, res) => {
     const { password } = req.body;
     const p = password?.trim();
-    const correctPassword = process.env.ADMIN_PASSWORD || "Kahu@2026Segura";
+    const envPassword = process.env.VITE_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
+    const correctPassword = envPassword || "Kahu@2026Segura";
     
     if (
       p === correctPassword || 
@@ -228,7 +232,7 @@ async function startServer() {
     ) {
       res.json({ success: true });
     } else {
-      res.status(401).json({ error: "Invalid password" });
+      res.status(401).json({ error: "Senha incorreta" });
     }
   });
 
