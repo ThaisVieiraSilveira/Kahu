@@ -227,8 +227,10 @@ export const EvaluationForm: React.FC = () => {
               className="w-full bg-transparent border-none focus:ring-0 text-sm md:text-xl font-bold text-neutral-800 p-0 cursor-pointer outline-none appearance-none"
             >
               <option value="">Selecione seu nome...</option>
-              {employees.map((name) => (
-                <option key={name} value={name}>
+              {employees
+                .filter(name => !name.toLowerCase().includes("tailandes"))
+                .map((name) => (
+                <option key={name} value={name} translate="no">
                   {name}
                 </option>
               ))}
@@ -300,7 +302,9 @@ export const EvaluationForm: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-12">
-          {employees.map((name) => (
+          {employees
+            .filter(name => !name.toLowerCase().includes("tailandes"))
+            .map((name) => (
             <motion.div
               key={name}
               initial={{ opacity: 0, y: 20 }}
@@ -314,7 +318,7 @@ export const EvaluationForm: React.FC = () => {
                     <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center text-neutral-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
                       <UserCircle size={24} />
                     </div>
-                    <h3 className="text-2xl font-black text-neutral-800">{name}</h3>
+                    <h3 className="text-2xl font-black text-neutral-800" translate="no">{name}</h3>
                   </div>
                   
                   <button

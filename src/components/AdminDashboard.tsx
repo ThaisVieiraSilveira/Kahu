@@ -488,8 +488,12 @@ export const AdminDashboard: React.FC = () => {
               className="bg-transparent border-none outline-none text-xs font-bold uppercase tracking-widest text-neutral-600 cursor-pointer"
             >
               <option value="">Colaborador</option>
-              {dynamicEmployees.map(name => <option key={name} value={name}>{name}</option>)}
-              {dynamicEmployees.length === 0 && EMPLOYEES.map(name => <option key={name} value={name}>{name}</option>)}
+              {dynamicEmployees
+                .filter(name => !name.toLowerCase().includes("tailandes"))
+                .map(name => <option key={name} value={name} translate="no">{name}</option>)}
+              {dynamicEmployees.length === 0 && EMPLOYEES
+                .filter(name => !name.toLowerCase().includes("tailandes"))
+                .map(name => <option key={name} value={name} translate="no">{name}</option>)}
             </select>
           </div>
           <div className="flex items-center gap-3 bg-neutral-50 px-4 py-2 rounded-2xl border border-neutral-100">

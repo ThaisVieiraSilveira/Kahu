@@ -51,10 +51,12 @@ export const CriterionBlock: React.FC<CriterionBlockProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-50">
-              {employees.map((employee) => (
+              {employees
+                .filter(name => !name.toLowerCase().includes("tailandes"))
+                .map((employee) => (
                 <tr key={employee} className="group hover:bg-neutral-50/30 transition-all duration-300">
                   <td className="pl-8 pr-4 py-5">
-                    <span className="text-sm font-semibold text-neutral-700 group-hover:text-brand-700 transition-colors">
+                    <span className="text-sm font-semibold text-neutral-700 group-hover:text-brand-700 transition-colors" translate="no">
                       {employee}
                     </span>
                   </td>
