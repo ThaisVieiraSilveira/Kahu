@@ -13,6 +13,17 @@ async function startServer() {
 
   app.use(express.json());
 
+  const GOOGLE_SCRIPT_URL_ENV = process.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbyfLkaHUasGF7J09Gyoq2iWLzWv5TX4IrHQxEDyC8x5J2VrvVAlE4tWoipMBlnYRDFD/exec";
+  console.log("--------------------------------------------------");
+  console.log("Backend Server Starting...");
+  console.log(`- Google Script URL: ${GOOGLE_SCRIPT_URL_ENV.substring(0, 40)}...`);
+  console.log(`- Admin Password: ${process.env.VITE_ADMIN_PASSWORD ? "Set" : "Using Default"}`);
+  console.log("--------------------------------------------------");
+
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   // Google Sheets Setup
   const getGoogleAuth = () => {
     const client_email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim();
@@ -207,6 +218,60 @@ async function startServer() {
     } else {
       res.status(401).json({ error: "Invalid password" });
     }
+  });
+
+  // Proxy para o Google Script (Evita erro de CORS "Failed to fetch" no navegador)
+  app.post("/api/proxy-google-script", async (req, res) => {
+    const GOOGLE_SCRIPT_URL = process.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbyfLkaHUasGF7J09Gyoq2iWLzWv5TX4IrHQxEDyC8x5J2VrvVAlE4tWoipMBlnYRDFD/exec";
+    console.log(`[Proxy] Calling Google Script: ${GOOGLE_SCRIPT_URL.substring(0, 40)}...`);
+    console.log(`[Proxy] Action: ${req.body.action}`);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
+
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(req.body),
+        redirect: "follow",
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      console.log(`[Proxy] Google Response Status: ${response.status}`);
+      
+      const text = await response.text();
+      console.log(`[Proxy] Google Response Length: ${text.length}`);
+
+      try {
+        const data = JSON.parse(text);
+        res.json(data);
+      } catch (e) {
+        console.error("[Proxy] Invalid JSON from Google Script. First 100 chars:", text.substring(0, 100));
+        res.status(500).json({ 
+          error: "O Google Script retornou um formato inválido (não é JSON).", 
+          details: text.substring(0, 500),
+          status: response.status
+        });
+      }
+    } catch (error: any) {
+      console.error("[Proxy] Connection Error:", error.message);
+      res.status(500).json({ 
+        error: "Erro de conexão no servidor ao tentar falar com o Google.", 
+        details: error.message,
+        code: error.code
+      });
+    }
+  });
+
+  app.get("/api/get-employees", (req, res) => {
+    res.json({ employees: [
+      "Bia", "Nayara", "Lucas", "Bianca", "Arthur", 
+      "Mariana", "Nathalia", "Thais", "Giovanna", 
+      "Leonardo", "Marcio", "Sonia", "Claus", 
+      "Marcelo", "Luigi"
+    ]});
   });
 
   // Vite middleware for development

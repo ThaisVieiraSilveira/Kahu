@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { CRITERIA, EMPLOYEES, EvaluationEntry } from "../types";
+import { CRITERIA, EvaluationEntry } from "../types";
 import { CriterionBlock } from "./CriterionBlock";
 import { api } from "../services/api";
 import { Save, CheckCircle2, Loader2, UserCircle, Calendar as CalendarIcon } from "lucide-react";
@@ -9,34 +9,56 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "../lib/utils";
 
 export const EvaluationForm: React.FC = () => {
+  const [employees, setEmployees] = useState<string[]>([]);
   const [evaluator, setEvaluator] = useState("");
-  const [evaluations, setEvaluations] = useState<Record<string, Record<string, number | null>>>(
-    CRITERIA.reduce((acc, criterion) => {
-      acc[criterion] = EMPLOYEES.reduce((eAcc, employee) => {
-        eAcc[employee] = null;
-        return eAcc;
-      }, {} as Record<string, number | null>);
-      return acc;
-    }, {} as Record<string, Record<string, number | null>>)
-  );
+  const [evaluations, setEvaluations] = useState<Record<string, Record<string, number | null>>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
 
   // Feedbacks State for each employee
   const [feedbacks, setFeedbacks] = useState<Record<string, {
     positivePoints: string;
     improvementPoints: string;
     recommendAsHighlight: boolean;
-  }>>(
-    EMPLOYEES.reduce((acc, name) => {
-      acc[name] = {
-        positivePoints: "",
-        improvementPoints: "",
-        recommendAsHighlight: false,
-      };
-      return acc;
-    }, {} as Record<string, any>)
-  );
+  }>>({});
+
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const list = await api.getEmployees();
+        setEmployees(list);
+        
+        // Initialize states
+        setEvaluations(
+          CRITERIA.reduce((acc, criterion) => {
+            acc[criterion] = list.reduce((eAcc, employee) => {
+              eAcc[employee] = null;
+              return eAcc;
+            }, {} as Record<string, number | null>);
+            return acc;
+          }, {} as Record<string, Record<string, number | null>>)
+        );
+
+        setFeedbacks(
+          list.reduce((acc, name) => {
+            acc[name] = {
+              positivePoints: "",
+              improvementPoints: "",
+              recommendAsHighlight: false,
+            };
+            return acc;
+          }, {} as Record<string, any>)
+        );
+      } catch (error) {
+        console.error("Failed to load employees:", error);
+      } finally {
+        setIsLoadingEmployees(false);
+      }
+    };
+
+    loadEmployees();
+  }, []);
 
   const handleScoreChange = (criterion: string, employee: string, score: number) => {
     setEvaluations((prev) => ({
@@ -54,17 +76,23 @@ export const EvaluationForm: React.FC = () => {
       return;
     }
 
-    // 1. Validate Quantitative Evaluations (Mandatory for all)
+    // 1. Validate ALL employees (as requested: "não quero que ignore")
+    if (employees.length === 0) {
+      alert("Erro: Lista de colaboradores vazia. Aguarde o carregamento ou verifique a aba Equipe.");
+      return;
+    }
+
     const flatEvaluations: EvaluationEntry[] = [];
     const now = new Date();
     const date = format(now, "yyyy-MM-dd");
     const time = format(now, "HH:mm:ss");
 
-    for (const criterion of CRITERIA) {
-      for (const employee of EMPLOYEES) {
+    for (const employee of employees) {
+      // Ensure ALL criteria are filled for EVERYONE
+      for (const criterion of CRITERIA) {
         const score = evaluations[criterion][employee];
         if (score === null) {
-          alert(`Por favor, preencha a nota de "${criterion}" para o colaborador "${employee}".`);
+          alert(`AVISO: Falta a nota de "${criterion}" para o colaborador "${employee}".`);
           return;
         }
         flatEvaluations.push({
@@ -76,23 +104,21 @@ export const EvaluationForm: React.FC = () => {
           time,
         });
       }
-    }
 
-    // 2. Validate Qualitative Feedbacks (Mandatory for all)
-    const filledFeedbacks = [];
-    for (const name of EMPLOYEES) {
-      const f = feedbacks[name];
+      // Ensure qualitative feedback is filled for EVERYONE
+      const f = feedbacks[employee];
       if (!f.positivePoints.trim() || !f.improvementPoints.trim()) {
-        alert(`Por favor, preencha os Pontos Positivos e de Melhoria para "${name}".`);
+        alert(`AVISO: Falta preencher os Pontos Positivos ou de Melhoria para "${employee}".`);
         return;
       }
-      filledFeedbacks.push({
-        employee: name,
-        positivePoints: f.positivePoints,
-        improvementPoints: f.improvementPoints,
-        recommendAsHighlight: f.recommendAsHighlight
-      });
     }
+
+    const filledFeedbacks = employees.map(name => ({
+      employee: name,
+      positivePoints: feedbacks[name].positivePoints,
+      improvementPoints: feedbacks[name].improvementPoints,
+      recommendAsHighlight: feedbacks[name].recommendAsHighlight
+    }));
 
     setIsSaving(true);
     try {
@@ -113,7 +139,7 @@ export const EvaluationForm: React.FC = () => {
         // Reset form
         setEvaluations(
           CRITERIA.reduce((acc, criterion) => {
-            acc[criterion] = EMPLOYEES.reduce((eAcc, employee) => {
+            acc[criterion] = employees.reduce((eAcc, employee) => {
               eAcc[employee] = null;
               return eAcc;
             }, {} as Record<string, number | null>);
@@ -122,7 +148,7 @@ export const EvaluationForm: React.FC = () => {
         );
         setEvaluator("");
         setFeedbacks(
-          EMPLOYEES.reduce((acc, name) => {
+          employees.reduce((acc, name) => {
             acc[name] = {
               positivePoints: "",
               improvementPoints: "",
@@ -142,6 +168,15 @@ export const EvaluationForm: React.FC = () => {
   };
 
   const today = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
+
+  if (isLoadingEmployees) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="w-16 h-16 border-4 border-brand-100 border-t-brand-600 rounded-full animate-spin" />
+        <p className="text-neutral-400 font-bold text-xs uppercase tracking-[0.2em]">Carregando Colaboradores...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-16">
@@ -176,23 +211,23 @@ export const EvaluationForm: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="glass-card rounded-[2.5rem] p-10 mb-16 flex flex-col md:flex-row items-center justify-between gap-8 sticky top-6 z-50"
+        className="glass-card rounded-b-3xl md:rounded-[2.5rem] p-4 md:p-10 mb-12 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8 sticky top-0 md:top-6 z-50 shadow-xl"
       >
-        <div className="flex items-center gap-6 w-full md:w-auto">
-          <div className="bg-neutral-100 p-4 rounded-2xl text-neutral-400">
-            <UserCircle size={32} />
+        <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
+          <div className="bg-neutral-100 p-3 md:p-4 rounded-xl md:rounded-2xl text-neutral-400 shrink-0">
+            <UserCircle size={24} className="md:w-8 md:h-8" />
           </div>
           <div className="flex-1">
-            <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-widest mb-2">
+            <label className="block text-[10px] md:text-[11px] font-bold text-neutral-400 uppercase tracking-widest mb-1 md:mb-2">
               Eu sou
             </label>
             <select
               value={evaluator}
               onChange={(e) => setEvaluator(e.target.value)}
-              className="w-full bg-transparent border-none focus:ring-0 text-xl font-bold text-neutral-800 p-0 cursor-pointer outline-none appearance-none"
+              className="w-full bg-transparent border-none focus:ring-0 text-sm md:text-xl font-bold text-neutral-800 p-0 cursor-pointer outline-none appearance-none"
             >
               <option value="">Selecione seu nome...</option>
-              {EMPLOYEES.map((name) => (
+              {employees.map((name) => (
                 <option key={name} value={name}>
                   {name}
                 </option>
@@ -205,18 +240,19 @@ export const EvaluationForm: React.FC = () => {
           onClick={handleSave}
           disabled={isSaving || showSuccess}
           className={cn(
-            "btn-primary w-full md:w-auto flex items-center justify-center gap-3 h-16 px-12 text-lg min-w-[240px]",
+            "w-full md:w-auto flex items-center justify-center gap-3 h-14 md:h-16 px-8 md:px-12 text-sm md:text-lg min-w-0 md:min-w-[240px] rounded-xl md:rounded-2xl transition-all active:scale-95",
+            "btn-primary",
             (isSaving || showSuccess) && "opacity-70 cursor-not-allowed"
           )}
         >
           {isSaving ? (
-            <Loader2 className="animate-spin" />
+            <Loader2 className="animate-spin w-5 h-5" />
           ) : showSuccess ? (
-            <CheckCircle2 />
+            <CheckCircle2 className="w-5 h-5" />
           ) : (
-            <Save size={22} />
+            <Save className="w-5 h-5 md:w-6 md:h-6" />
           )}
-          {isSaving ? "Processando..." : showSuccess ? "Avaliação Salva!" : "Salvar Tudo"}
+          {isSaving ? "Processando..." : showSuccess ? "Salvo!" : "Salvar Tudo"}
         </button>
       </motion.div>
 
@@ -244,6 +280,7 @@ export const EvaluationForm: React.FC = () => {
           <CriterionBlock
             key={criterion}
             criterion={criterion}
+            employees={employees}
             values={evaluations[criterion]}
             onChange={(employee, score) => handleScoreChange(criterion, employee, score)}
           />
@@ -258,12 +295,12 @@ export const EvaluationForm: React.FC = () => {
           </div>
           <div>
             <h2 className="text-3xl font-black text-neutral-900 tracking-tight">Feedback Qualitativo</h2>
-            <p className="text-neutral-500 font-medium">Todos os campos são obrigatórios. Escolha apenas UM destaque da equipe.</p>
+            <p className="text-neutral-500 font-medium">Todos os campos são obrigatórios para os colaboradores avaliados.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-12">
-          {EMPLOYEES.map((name) => (
+          {employees.map((name) => (
             <motion.div
               key={name}
               initial={{ opacity: 0, y: 20 }}

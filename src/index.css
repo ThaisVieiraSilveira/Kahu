@@ -25,6 +25,13 @@
   --color-neutral-700: #404040;
   --color-neutral-800: #262626;
   --color-neutral-900: #171717;
+
+  --animate-bounce-x: bounce-x 1s infinite;
+
+  @keyframes bounce-x {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(5px); }
+  }
 }
 
 @layer base {

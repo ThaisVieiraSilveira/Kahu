@@ -1,141 +1,118 @@
 import { EvaluationEntry } from "../types";
 
-const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbziQd8428QWyTkhMUtZO7t3PM-X7YZCq1wroRmHXZWoCxNB9-NgHI-WdrfBJ-Ir6MTW/exec";
+const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbyfLkaHUasGF7J09Gyoq2iWLzWv5TX4IrHQxEDyC8x5J2VrvVAlE4tWoipMBlnYRDFD/exec";
 
-console.log("API Service Initialized. Google Script URL:", GOOGLE_SCRIPT_URL ? "Defined" : "Not Defined");
+console.log("API Service Initialized.");
+
+// Função auxiliar para chamar o proxy no servidor (evita erro de CORS no navegador)
+async function callProxy(action: string, extraData: any = {}) {
+  try {
+    const response = await fetch("/api/proxy-google-script", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, ...extraData }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error || `Erro no servidor (${response.status})`;
+      const errorDetails = errorData.details ? ` | Detalhes: ${errorData.details}` : "";
+      throw new Error(errorMessage + errorDetails);
+    }
+    
+    return await response.json();
+  } catch (error: any) {
+    console.error(`Proxy call failed (${action}):`, error);
+    throw error;
+  }
+}
 
 export const api = {
   async saveEvaluations(evaluations: EvaluationEntry[]) {
-    console.log("Attempting to save evaluations. Script URL present:", !!GOOGLE_SCRIPT_URL);
-    
-    // If Google Script URL is provided, send data there directly
-    if (GOOGLE_SCRIPT_URL) {
-      try {
-        const mappedEvaluations = evaluations.map(e => ({
-          avaliador: e.evaluator,
-          avaliado: e.employee,
-          criterio: e.criterion,
-          nota: e.score,
-          data: e.date,
-          horario: e.time
-        }));
+    try {
+      const mappedEvaluations = evaluations.map(e => ({
+        avaliador: e.evaluator,
+        avaliado: e.employee,
+        criterio: e.criterion,
+        nota: e.score,
+        data: e.date,
+        horario: e.time
+      }));
 
-        console.log("Sending to Google Script...");
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "saveEvaluations", evaluations: mappedEvaluations }),
-        });
-        
-        console.log("Google Script response status:", response.status);
-        return { success: true };
-      } catch (error) {
-        console.error("Error sending to Google Script:", error);
-        throw new Error("Erro de conexão com o Google Script. Verifique se a URL está correta e se o script foi publicado como 'Qualquer pessoa'.");
-      }
+      return await callProxy("saveEvaluations", { evaluations: mappedEvaluations });
+    } catch (error: any) {
+      console.warn("Proxy failed, falling back to local API (if configured)...", error);
+      // Fallback to local server API (legacy)
+      const response = await fetch("/api/save-evaluations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ evaluations }),
+      });
+      if (!response.ok) throw error;
+      return response.json();
     }
-
-    console.warn("VITE_GOOGLE_SCRIPT_URL not found. Falling back to local API.");
-    // Fallback to local server API
-    const response = await fetch("/api/save-evaluations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ evaluations }),
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || "Falha ao salvar avaliações");
-    }
-    return response.json();
   },
 
   async saveFeedback(feedback: any) {
-    console.log("Attempting to save feedback. Script URL present:", !!GOOGLE_SCRIPT_URL);
-    if (GOOGLE_SCRIPT_URL) {
-      try {
-        console.log("Sending feedback to Google Script...");
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "saveFeedback", ...feedback }),
-        });
-        console.log("Google Script feedback response status:", response.status);
-        return { success: true };
-      } catch (error) {
-        console.error("Error sending feedback to Google Script:", error);
-        throw new Error("Erro de conexão com o Google Script. Verifique a URL e as permissões.");
-      }
+    try {
+      return await callProxy("saveFeedback", feedback);
+    } catch (error: any) {
+      console.warn("Proxy failed for feedback, falling back...", error);
+      const response = await fetch("/api/save-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(feedback),
+      });
+      if (!response.ok) throw error;
+      return response.json();
     }
-
-    console.warn("VITE_GOOGLE_SCRIPT_URL not found for feedback. Falling back to local API.");
-    const response = await fetch("/api/save-feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(feedback),
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || "Falha ao salvar feedback");
-    }
-    return response.json();
   },
 
   async getEvaluations(): Promise<EvaluationEntry[]> {
-    if (GOOGLE_SCRIPT_URL) {
-      try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "getData" }),
-        });
-        
-        const text = await response.text();
-        try {
-          const data = JSON.parse(text);
-          return data.evaluations || [];
-        } catch (e) {
-          console.error("Failed to parse JSON from Google Script. Response text:", text);
-          throw new Error("O Google Script retornou um formato inválido. Verifique se o script foi publicado corretamente.");
-        }
-      } catch (error: any) {
-        console.error("Error fetching from Google Script:", error);
-        throw error;
-      }
+    try {
+      const data = await callProxy("getData");
+      return data.evaluations || [];
+    } catch (error: any) {
+      console.warn("Proxy failed for evaluations, falling back...", error);
+      const response = await fetch("/api/get-evaluations");
+      if (!response.ok) throw error;
+      const data = await response.json();
+      return data.evaluations || [];
     }
-
-    const response = await fetch("/api/get-evaluations");
-    if (!response.ok) throw new Error("Falha ao buscar avaliações");
-    const data = await response.json();
-    return data.evaluations;
   },
 
   async getFeedbacks(): Promise<any[]> {
-    if (GOOGLE_SCRIPT_URL) {
-      try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "getData" }),
-        });
-        
-        const text = await response.text();
-        try {
-          const data = JSON.parse(text);
-          return data.feedbacks || [];
-        } catch (e) {
-          console.error("Failed to parse JSON for feedbacks. Response text:", text);
-          throw new Error("O Google Script retornou um formato inválido para feedbacks.");
-        }
-      } catch (error: any) {
-        console.error("Error fetching feedbacks from Google Script:", error);
-        throw error;
-      }
+    try {
+      const data = await callProxy("getData");
+      return data.feedbacks || [];
+    } catch (error: any) {
+      console.warn("Proxy failed for feedbacks, falling back...", error);
+      const response = await fetch("/api/get-feedbacks");
+      if (!response.ok) throw error;
+      const data = await response.json();
+      return data.feedbacks || [];
     }
+  },
 
-    const response = await fetch("/api/get-feedbacks");
-    if (!response.ok) throw new Error("Falha ao buscar feedbacks");
-    const data = await response.json();
-    return data.feedbacks;
+  async getEmployees(): Promise<string[]> {
+    try {
+      const data = await callProxy("getEmployees");
+      if (data.employees && data.employees.length > 0) {
+        return data.employees;
+      }
+      throw new Error("No employees found in spreadsheet");
+    } catch (error: any) {
+      console.warn("Proxy failed for employees, falling back to local...", error);
+      const response = await fetch("/api/get-employees");
+      if (!response.ok) return [
+        "Bia", "Nayara", "Lucas", "Bianca", "Arthur", 
+        "Mariana", "Nathalia", "Thais", "Giovanna", 
+        "Leonardo", "Marcio", "Sonia", "Claus", 
+        "Marcelo", "Luigi"
+      ];
+      const data = await response.json();
+      return data.employees || [];
+    }
   },
 
   async adminLogin(password: string) {
