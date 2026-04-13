@@ -1,6 +1,6 @@
 import { EvaluationEntry } from "../types";
 
-const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbym4plPiZBoFu0vTeftANvTrDHGBuoHS3e1JCqL1eTMXRghoibVNV-F-JfP-jaRgsns/exec";
+const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbxTjnE87R_fBb_HShoiZ7U5Zxl3Z3P1Fmq4fDX_OWAq_poTBoswLqnGDVcEAp79Ubya/exec";
 
 console.log("API Service Initialized.");
 
