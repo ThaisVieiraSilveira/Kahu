@@ -1,6 +1,7 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
+import fs from "fs";
 import { google } from "googleapis";
 import { GoogleAuth } from "google-auth-library";
 import dotenv from "dotenv";
@@ -14,14 +15,25 @@ async function startServer() {
   app.use(express.json());
 
   const GOOGLE_SCRIPT_URL_ENV = process.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbyfLkaHUasGF7J09Gyoq2iWLzWv5TX4IrHQxEDyC8x5J2VrvVAlE4tWoipMBlnYRDFD/exec";
+  const distPath = path.join(process.cwd(), "dist");
+  const hasDist = fs.existsSync(distPath);
+  const isProduction = process.env.NODE_ENV === "production" && hasDist;
+
   console.log("--------------------------------------------------");
   console.log("Backend Server Starting...");
+  console.log(`- Mode: ${isProduction ? "Production" : "Development (Vite)"}`);
   console.log(`- Google Script URL: ${GOOGLE_SCRIPT_URL_ENV.substring(0, 40)}...`);
   console.log(`- Admin Password: ${process.env.VITE_ADMIN_PASSWORD ? "Set" : "Using Default"}`);
   console.log("--------------------------------------------------");
 
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+    console.log("[Health] Check received");
+    res.json({ 
+      status: "ok", 
+      timestamp: new Date().toISOString(),
+      mode: isProduction ? "production" : "development",
+      hasDist
+    });
   });
 
   // Google Sheets Setup
@@ -275,14 +287,13 @@ async function startServer() {
   });
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  if (!isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));

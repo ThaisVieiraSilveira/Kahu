@@ -133,5 +133,9 @@ export const api = {
     } else {
       throw new Error("Senha incorreta");
     }
+  },
+
+  async callProxy(action: string, extraData: any = {}) {
+    return await callProxy(action, extraData);
   }
 };
