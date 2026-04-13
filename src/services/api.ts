@@ -31,19 +31,21 @@ async function callProxy(action: string, extraData: any = {}) {
 export const api = {
   async saveEvaluations(evaluations: EvaluationEntry[]) {
     try {
+      console.log("[API] Saving evaluations via proxy...");
+      // Sync with Google Script fields (English)
       const mappedEvaluations = evaluations.map(e => ({
-        avaliador: e.evaluator,
-        avaliado: e.employee,
-        criterio: e.criterion,
-        nota: e.score,
-        data: e.date,
-        horario: e.time
+        evaluator: e.evaluator,
+        employee: e.employee,
+        criterion: e.criterion,
+        score: e.score,
+        date: e.date,
+        time: e.time
       }));
 
       return await callProxy("saveEvaluations", { evaluations: mappedEvaluations });
     } catch (error: any) {
-      console.warn("Proxy failed, falling back to local API (if configured)...", error);
-      // Fallback to local server API (legacy)
+      console.warn("Proxy failed, falling back to local API...", error);
+      // Fallback to local server API
       const response = await fetch("/api/save-evaluations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

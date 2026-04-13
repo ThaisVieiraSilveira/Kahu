@@ -66,6 +66,11 @@ async function startServer() {
   const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID;
 
   // API Routes
+  app.all("/api/*", (req, res, next) => {
+    console.log(`[API Request] ${req.method} ${req.url}`);
+    next();
+  });
+
   app.post("/api/save-evaluations", async (req, res) => {
     try {
       const { evaluations } = req.body;
@@ -289,6 +294,15 @@ async function startServer() {
       "Leonardo", "Marcio", "Sonia", "Claus", 
       "Marcelo", "Luigi"
     ]});
+  });
+
+  // Catch-all for API routes that don't match
+  app.all("/api/*", (req, res) => {
+    console.warn(`[API 404] ${req.method} ${req.url} - Not Found`);
+    res.status(404).json({ 
+      error: `Rota API não encontrada: ${req.method} ${req.url}`,
+      message: "Verifique se a URL da API está correta no frontend."
+    });
   });
 
   // Vite middleware for development
