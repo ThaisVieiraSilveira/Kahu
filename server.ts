@@ -280,7 +280,7 @@ async function startServer() {
   app.get("/api/get-employees", (req, res) => {
     res.json({ employees: [
       "Bia", "Nayara", "Lucas", "Bianca", "Arthur", 
-      "Mariana", "Nathalia", "Thais", "Giovanna", 
+      "Mariana", "Nathalia", "Thaís", "Giovanna", 
       "Leonardo", "Marcio", "Sonia", "Claus", 
       "Marcelo", "Luigi"
     ]});

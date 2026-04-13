@@ -106,7 +106,7 @@ export const api = {
       const response = await fetch("/api/get-employees");
       if (!response.ok) return [
         "Bia", "Nayara", "Lucas", "Bianca", "Arthur", 
-        "Mariana", "Nathalia", "Thais", "Giovanna", 
+        "Mariana", "Nathalia", "Thaís", "Giovanna", 
         "Leonardo", "Marcio", "Sonia", "Claus", 
         "Marcelo", "Luigi"
       ];

@@ -9,7 +9,7 @@ export type Criterion =
 
 export const EMPLOYEES = [
   "Bia", "Nayara", "Lucas", "Bianca", "Arthur", 
-  "Mariana", "Nathalia", "Thais", "Giovanna", 
+  "Mariana", "Nathalia", "Thaís", "Giovanna", 
   "Leonardo", "Marcio", "Sonia", "Claus", 
   "Marcelo", "Luigi"
 ];
