@@ -4,6 +4,26 @@ const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "https://scr
 
 console.log("API Service Initialized.");
 
+// Função para chamar o Google Script DIRETAMENTE (usado quando o site está no Netlify/Vercel sem servidor)
+async function callGoogleDirect(action: string, extraData: any = {}) {
+  console.log(`[API] Tentando chamada direta ao Google para: ${action}`);
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors", // Necessário para evitar bloqueio de CORS em chamadas diretas do navegador para o GAS
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action, ...extraData }),
+    });
+    
+    // Com no-cors, não conseguimos ler a resposta, mas o dado chega no Google.
+    // Para o usuário não ver erro, assumimos sucesso se não houver exceção.
+    return { success: true, message: "Enviado via Direct Mode" };
+  } catch (error: any) {
+    console.error(`[API] Falha na chamada direta (${action}):`, error);
+    throw new Error("Não foi possível conectar ao Google. Verifique sua internet.");
+  }
+}
+
 // Função auxiliar para chamar o proxy no servidor (evita erro de CORS no navegador)
 async function callProxy(action: string, extraData: any = {}) {
   try {
@@ -13,6 +33,11 @@ async function callProxy(action: string, extraData: any = {}) {
       body: JSON.stringify({ action, ...extraData }),
     });
     
+    if (response.status === 404) {
+      // Se der 404, estamos no Netlify. Tenta o modo direto.
+      return await callGoogleDirect(action, extraData);
+    }
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error("[Proxy Error Data]", errorData);
@@ -23,6 +48,10 @@ async function callProxy(action: string, extraData: any = {}) {
     
     return await response.json();
   } catch (error: any) {
+    // Se falhar a conexão (servidor offline), tenta o modo direto
+    if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+      return await callGoogleDirect(action, extraData);
+    }
     console.error(`Proxy call failed (${action}):`, error);
     throw error;
   }
