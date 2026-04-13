@@ -234,7 +234,7 @@ async function startServer() {
 
   // Proxy para o Google Script (Evita erro de CORS "Failed to fetch" no navegador)
   app.post("/api/proxy-google-script", async (req, res) => {
-    const GOOGLE_SCRIPT_URL = process.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbyfLkaHUasGF7J09Gyoq2iWLzWv5TX4IrHQxEDyC8x5J2VrvVAlE4tWoipMBlnYRDFD/exec";
+    const GOOGLE_SCRIPT_URL = process.env.VITE_GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL_ENV;
     console.log(`[Proxy] Calling Google Script: ${GOOGLE_SCRIPT_URL.substring(0, 40)}...`);
     console.log(`[Proxy] Action: ${req.body.action}`);
 
@@ -278,6 +278,7 @@ async function startServer() {
   });
 
   app.get("/api/get-employees", (req, res) => {
+    console.log("[API] get-employees called");
     res.json({ employees: [
       "Bia", "Nayara", "Lucas", "Bianca", "Arthur", 
       "Mariana", "Nathalia", "Thaís", "Giovanna", 
