@@ -17,7 +17,7 @@ async function startServer() {
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-  const GOOGLE_SCRIPT_URL_ENV = process.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbyfLkaHUasGF7J09Gyoq2iWLzWv5TX4IrHQxEDyC8x5J2VrvVAlE4tWoipMBlnYRDFD/exec";
+  const GOOGLE_SCRIPT_URL_ENV = process.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbym4plPiZBoFu0vTeftANvTrDHGBuoHS3e1JCqL1eTMXRghoibVNV-F-JfP-jaRgsns/exec";
   const distPath = path.join(process.cwd(), "dist");
   const hasDist = fs.existsSync(distPath);
   const isProduction = process.env.NODE_ENV === "production" && hasDist;
