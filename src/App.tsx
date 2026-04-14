@@ -88,7 +88,7 @@ export default function App() {
       <footer className="bg-white border-t border-neutral-200 py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-neutral-400 text-sm font-medium">
-            &copy; {new Date().getFullYear()} KAHU - Sistema Interno de Avaliação • v1.1.0
+            &copy; {new Date().getFullYear()} KAHU - Sistema Interno de Avaliação • v1.1.1
           </p>
         </div>
       </footer>

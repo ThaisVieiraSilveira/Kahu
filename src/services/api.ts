@@ -60,8 +60,9 @@ async function callProxy(action: string, extraData: any = {}) {
 export const api = {
   async saveEvaluations(evaluations: EvaluationEntry[]) {
     try {
-      console.log(`[API] Enviando ${evaluations.length} avaliações...`);
-      // Garante que os campos batam exatamente com o que o Script espera
+      console.log(`[API] Iniciando salvamento de ${evaluations.length} avaliações...`);
+      
+      // Mapeia os dados
       const mappedEvaluations = evaluations.map(e => ({
         evaluator: String(e.evaluator || ""),
         employee: String(e.employee || ""),
@@ -71,7 +72,20 @@ export const api = {
         time: String(e.time || "")
       }));
 
-      return await callProxy("saveEvaluations", { evaluations: mappedEvaluations });
+      // Divide em pedaços menores (chunks) de 30 para evitar erros de timeout ou limite de payload
+      const chunkSize = 30;
+      for (let i = 0; i < mappedEvaluations.length; i += chunkSize) {
+        const chunk = mappedEvaluations.slice(i, i + chunkSize);
+        console.log(`[API] Enviando bloco ${Math.floor(i/chunkSize) + 1}...`);
+        await callProxy("saveEvaluations", { evaluations: chunk });
+        
+        // Pequeno atraso entre blocos para não sobrecarregar o Google
+        if (i + chunkSize < mappedEvaluations.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      return { success: true };
     } catch (error: any) {
       console.warn("Proxy failed, falling back to local API...", error);
       const response = await fetch("/api/save-evaluations", {
